@@ -114,4 +114,43 @@ describe('Logger', () => {
     `);
     assert.equal(r, 'warn');
   });
+
+  test('a resource names itself, because the default is wrong everywhere but here', async () => {
+    const r = await lua.doString(`
+      local seen = {}
+      Nxc.Logger.setSink(function(record) seen[#seen + 1] = record.resource end)
+
+      Nxc.Logger.info('before', {})
+      Nxc.Logger.setResource('nxc_core')
+      Nxc.Logger.info('after', {})
+
+      return { before = seen[1], after = seen[2] }
+    `);
+    // Every resource loads nxc_lib into its OWN Lua state, so Nxc.RESOURCE reads
+    // nxc_lib inside nxc_core. Without setResource, every line in the system
+    // claims one origin.
+    assert.equal(r.before, 'nxc_lib');
+    assert.equal(r.after, 'nxc_core');
+  });
+
+  test('setResource refuses a name that is not one', async () => {
+    const r = await lua.doString(`
+      local a = pcall(Nxc.Logger.setResource, '')
+      local b = pcall(Nxc.Logger.setResource, nil)
+      return { empty = a, missing = b }
+    `);
+    assert.equal(r.empty, false);
+    assert.equal(r.missing, false);
+  });
+
+  test('an explicit resource on the call still wins', async () => {
+    const r = await lua.doString(`
+      local seen
+      Nxc.Logger.setSink(function(record) seen = record.resource end)
+      Nxc.Logger.setResource('nxc_core')
+      Nxc.Logger.info('act', {}, { resource = 'nxc_banking' })
+      return seen
+    `);
+    assert.equal(r, 'nxc_banking');
+  });
 });

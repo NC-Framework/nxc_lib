@@ -13,12 +13,58 @@ Logger.LEVELS = { debug = 10, info = 20, warn = 30, error = 40, fatal = 50 }
 
 local currentLevel = Logger.LEVELS.info
 local environment = 'development'
+
+-- Which resource is emitting. Defaults to nxc_lib and is almost always wrong
+-- until set: every resource loads nxc_lib's modules into ITS OWN Lua state, so
+-- `Nxc.RESOURCE` reads `nxc_lib` inside nxc_core, and every nxc_core log line
+-- claimed to come from nxc_lib. Observed on a real server before it was noticed
+-- here.
+local resourceName = nil
+--- Render a context table as bounded `key=value` pairs.
+---
+--- The first version of this printed the literal string `<context>` whenever a
+--- record carried one, on the reasoning that a log line should not dump an
+--- object. On a real server that produced `migration.applying <context>`, which
+--- names the event and withholds the only fact anyone wanted — WHICH migration.
+---
+--- A log line that omits the useful part is not concise, it is empty. So the
+--- context is rendered, sorted for stable diffs, and bounded so one large record
+--- cannot flood a console.
+local function renderContext(context)
+    if type(context) ~= 'table' then return '' end
+
+    local keys = {}
+    for key in pairs(context) do keys[#keys + 1] = tostring(key) end
+    if #keys == 0 then return '' end
+    table.sort(keys)
+
+    local parts = {}
+    for _, key in ipairs(keys) do
+        local value = context[key]
+        if type(value) == 'table' then
+            local items = {}
+            for _, item in ipairs(value) do items[#items + 1] = tostring(item) end
+            value = #items > 0 and ('[' .. table.concat(items, ',') .. ']') or '{...}'
+        end
+        value = tostring(value)
+        if #value > 96 then value = value:sub(1, 93) .. '...' end
+        parts[#parts + 1] = key .. '=' .. value
+    end
+
+    local rendered = table.concat(parts, ' ')
+    if #rendered > 400 then rendered = rendered:sub(1, 397) .. '...' end
+    return rendered
+end
+
 local sink = function(record)
-    -- Default sink: one structured line per record, which txAdmin and standard
-    -- log shipping already capture.
-    print(('[%s] %s %s %s'):format(
-        record.severity:upper(), record.resource, record.action,
-        Nxc.Serialize.approximateSize(record.context) > 2 and '<context>' or ''))
+    -- Default sink: one line per record, which txAdmin and standard log shipping
+    -- already capture. Redaction has already happened upstream, at the call site.
+    local line = ('[%s] %s %s'):format(
+        record.severity:upper(), record.resource, record.action)
+    if record.correlationId then line = line .. ' ' .. record.correlationId end
+    local context = renderContext(record.context)
+    if context ~= '' then line = line .. '  ' .. context end
+    print(line)
 end
 
 --- Replace the sink.
@@ -52,6 +98,21 @@ function Logger.setEnvironment(name)
     environment = name
 end
 
+--- Name the resource these records come from.
+---
+--- **Every resource must call this.** A shared library loaded into another
+--- resource's Lua state cannot know whose state it is in: `Nxc.RESOURCE` says
+--- `nxc_lib` everywhere, so without this every log line in the system claims one
+--- origin and diagnosing anything means guessing.
+---
+---@param name string
+function Logger.setResource(name)
+    if type(name) ~= 'string' or name == '' then
+        error('Logger.setResource requires a resource name', 2)
+    end
+    resourceName = name
+end
+
 local function emit(severity, action, context, opts)
     if Logger.LEVELS[severity] < currentLevel then return end
     opts = opts or {}
@@ -59,7 +120,7 @@ local function emit(severity, action, context, opts)
     local record = {
         timestamp = Nxc.Time.iso8601(),
         environment = environment,
-        resource = opts.resource or Nxc.RESOURCE,
+        resource = opts.resource or resourceName or Nxc.RESOURCE,
         version = opts.version or Nxc.VERSION,
         action = action,
         actorAccount = opts.actorAccount,
