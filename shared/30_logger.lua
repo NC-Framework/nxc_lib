@@ -81,7 +81,7 @@ function Logger.setSink(fn)
     end
     sink = fn
 end
-exports("NXC.Logger.setSink", Logger.setSink)
+exports("NXC.Logger.setSink", Logger.setSink(fn))
 --- Set the minimum severity emitted. `debug` is disabled in production.
 ---
 ---@param level string
@@ -92,7 +92,7 @@ function Logger.setLevel(level)
     end
     currentLevel = value
 end
-exports("NXC.Logger.setLevel", Logger.setLevel)
+exports("NXC.Logger.setLevel", Logger.setLevel(level))
 
 ---@param name string
 function Logger.setEnvironment(name)
@@ -114,7 +114,7 @@ function Logger.setResource(name)
     end
     resourceName = name
 end
-exports("NXC.Logger.setResource", Logger.setResource)
+exports("NXC.Logger.setResource", Logger.setResource(name))
 
 local function emit(severity, action, context, opts)
     if Logger.LEVELS[severity] < currentLevel then return end
