@@ -161,7 +161,7 @@ local function checkSize(env, correlationId)
     if size > Envelope.MAX_BYTES then
         return Nxc.Result.err(Nxc.Errors.new(
             Nxc.Errors.CODES.PAYLOAD_TOO_LARGE,
-            'The request was too large.',
+            (Nxc.Locale and Nxc.Locale.get('error.payloadTooLarge')) or 'The request was too large.',
             { correlationId = correlationId, details = { bytes = size, limit = Envelope.MAX_BYTES } }))
     end
     return nil
@@ -180,7 +180,7 @@ function Envelope.validate(env, expectedKind)
     if type(env) ~= 'table' then
         return Nxc.Result.err(Nxc.Errors.new(
             Nxc.Errors.CODES.MALFORMED_ENVELOPE,
-            'The message was not understood.',
+            (Nxc.Locale and Nxc.Locale.get('error.malformedEnvelope')) or 'The message was not understood.',
             { details = { reason = 'not a table' } }))
     end
 
@@ -194,14 +194,14 @@ function Envelope.validate(env, expectedKind)
     else
         return Nxc.Result.err(Nxc.Errors.new(
             Nxc.Errors.CODES.MALFORMED_ENVELOPE,
-            'The message was not understood.',
+            (Nxc.Locale and Nxc.Locale.get('error.malformedEnvelope')) or 'The message was not understood.',
             { details = { reason = 'unknown kind' } }))
     end
 
     if expectedKind and env.kind ~= expectedKind then
         return Nxc.Result.err(Nxc.Errors.new(
             Nxc.Errors.CODES.MALFORMED_ENVELOPE,
-            'The message was not understood.',
+            (Nxc.Locale and Nxc.Locale.get('error.malformedEnvelope')) or 'The message was not understood.',
             { details = { reason = 'unexpected kind', expected = expectedKind } }))
     end
 
@@ -217,7 +217,7 @@ function Envelope.validate(env, expectedKind)
     if not Nxc.Correlation.isValid(env.correlationId) then
         return Nxc.Result.err(Nxc.Errors.new(
             Nxc.Errors.CODES.MALFORMED_ENVELOPE,
-            'The message was not understood.',
+            (Nxc.Locale and Nxc.Locale.get('error.malformedEnvelope')) or 'The message was not understood.',
             { details = { reason = 'malformed correlation id' } }))
     end
 

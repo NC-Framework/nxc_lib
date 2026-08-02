@@ -117,6 +117,29 @@ function Errors.toPlayer(err)
     }
 end
 
+--- Resolve a player-facing message.
+---
+--- No user-facing string is hardcoded in logic. The literal is passed as a
+--- fallback rather than omitted, so an error still reads correctly if the locale
+--- table has not loaded — an error path is exactly when a missing string is
+--- least welcome.
+---
+--- Locale loads after this module, so resolution happens at call time rather
+--- than at load time.
+---
+---@param key string
+---@param fallback string
+---@return string
+local function message(key, fallback)
+    if Nxc.Locale then
+        local text = Nxc.Locale.get(key)
+        -- Locale humanises an unknown key rather than returning nil, so compare
+        -- against the humanised form to detect a genuine miss.
+        if text and text ~= '' then return text end
+    end
+    return fallback
+end
+
 -- Constructors for the common conditions. Having these named means a call site
 -- cannot accidentally mark a permission denial retryable.
 
@@ -124,7 +147,7 @@ end
 ---@param correlationId string|nil
 ---@return NxcError
 function Errors.validationFailed(details, correlationId)
-    return Errors.new(Errors.CODES.VALIDATION_FAILED, 'The request was not valid.', {
+    return Errors.new(Errors.CODES.VALIDATION_FAILED, message('error.validationFailed', 'The request was not valid.'), {
         correlationId = correlationId,
         details = details,
     })
@@ -134,7 +157,7 @@ end
 ---@param correlationId string|nil
 ---@return NxcError
 function Errors.forbidden(capability, correlationId)
-    return Errors.new(Errors.CODES.FORBIDDEN, 'You are not permitted to do that.', {
+    return Errors.new(Errors.CODES.FORBIDDEN, message('error.forbidden', 'You are not permitted to do that.'), {
         correlationId = correlationId,
         details = { capability = capability },
     })
@@ -144,7 +167,7 @@ end
 ---@param retryAfterMs number|nil
 ---@return NxcError
 function Errors.rateLimited(correlationId, retryAfterMs)
-    return Errors.new(Errors.CODES.RATE_LIMITED, 'Too many requests. Try again shortly.', {
+    return Errors.new(Errors.CODES.RATE_LIMITED, message('error.rateLimited', 'Too many requests. Try again shortly.'), {
         correlationId = correlationId,
         details = retryAfterMs and { retryAfterMs = retryAfterMs } or nil,
     })
@@ -164,7 +187,7 @@ function Errors.timeout(correlationId, idempotent)
         error('Errors.timeout requires an explicit idempotent flag: retrying a '
             .. 'non-idempotent operation after a timeout can duplicate it', 2)
     end
-    return Errors.new(Errors.CODES.TIMEOUT, 'The request timed out.', {
+    return Errors.new(Errors.CODES.TIMEOUT, message('error.timeout', 'The request timed out.'), {
         correlationId = correlationId,
         retryable = idempotent,
     })
@@ -173,7 +196,7 @@ end
 ---@param correlationId string|nil
 ---@return NxcError
 function Errors.cancelled(correlationId)
-    return Errors.new(Errors.CODES.CANCELLED, 'The request was cancelled.', {
+    return Errors.new(Errors.CODES.CANCELLED, message('error.cancelled', 'The request was cancelled.'), {
         correlationId = correlationId,
     })
 end
@@ -181,7 +204,7 @@ end
 ---@param correlationId string|nil
 ---@return NxcError
 function Errors.sessionInvalid(correlationId)
-    return Errors.new(Errors.CODES.SESSION_INVALID, 'Your session is no longer valid.', {
+    return Errors.new(Errors.CODES.SESSION_INVALID, message('error.sessionInvalid', 'Your session is no longer valid.'), {
         correlationId = correlationId,
     })
 end
@@ -194,7 +217,7 @@ end
 ---@param correlationId string|nil
 ---@return NxcError
 function Errors.internal(correlationId)
-    return Errors.new(Errors.CODES.INTERNAL, 'Something went wrong.', {
+    return Errors.new(Errors.CODES.INTERNAL, message('error.internal', 'Something went wrong.'), {
         correlationId = correlationId,
     })
 end

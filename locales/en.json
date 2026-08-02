@@ -1,0 +1,11 @@
+{
+  "error.validationFailed": "The request was not valid.",
+  "error.forbidden": "You are not permitted to do that.",
+  "error.rateLimited": "Too many requests. Try again shortly.",
+  "error.timeout": "The request timed out.",
+  "error.cancelled": "The request was cancelled.",
+  "error.sessionInvalid": "Your session is no longer valid.",
+  "error.payloadTooLarge": "The request was too large.",
+  "error.malformedEnvelope": "The message was not understood.",
+  "error.internal": "Something went wrong."
+}
