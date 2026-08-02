@@ -1,13 +1,13 @@
-import { test, describe, before, after, beforeEach } from 'node:test';
+import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createEngine, withFrozenClock } from './harness.mjs';
 
 let lua;
-before(async () => {
+beforeEach(async () => {
   lua = await createEngine();
   await withFrozenClock(lua, 1700000000000);
 });
-after(() => lua.global.close());
+afterEach(() => lua.global.close());
 
 // Capture records instead of printing them, so assertions see the structure
 // rather than a formatted line.

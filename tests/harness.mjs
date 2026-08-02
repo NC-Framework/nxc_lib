@@ -9,6 +9,19 @@
  * Files load in filename order, which is the same order `shared_scripts` globs
  * them in the manifest. A module that depends on one loaded later would fail
  * here for the same reason it would fail on a server.
+
+ *
+ * ONE ENGINE PER TEST, NOT PER FILE. wasmoon 1.16.0 leaks on every `doString`,
+ * and an engine stops working after roughly sixty of them: Lua starts reporting
+ * `_ENV` as nil, or closing the state faults with an out-of-bounds access. This
+ * is reproducible on a bare engine with no Nexus code loaded at all, so it is a
+ * property of the runner rather than anything the framework does.
+ *
+ * Loading the shared modules already spends about half that budget, which left
+ * the previous per-file engine sitting just under the limit — the suite passed
+ * until one more test file was added, and then unrelated files began failing at
+ * teardown. An engine per test costs about thirteen milliseconds and removes the
+ * cliff entirely.
  */
 
 import { readdirSync, readFileSync } from 'node:fs';
@@ -22,7 +35,7 @@ const sharedDir = resolve(here, '..', 'shared');
 /**
  * Create an engine with every shared module loaded.
  *
- * A fresh engine per test file keeps state isolated: a test that depends on
+ * A fresh engine per test also keeps state isolated: a test that depends on
  * another test having run is a test that fails when run alone.
  */
 export async function createEngine() {

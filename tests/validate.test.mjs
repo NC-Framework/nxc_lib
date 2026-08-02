@@ -1,10 +1,10 @@
-import { test, describe, before, after } from 'node:test';
+import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createEngine, withFrozenClock } from './harness.mjs';
 
 let lua;
-before(async () => { lua = await createEngine(); });
-after(() => lua.global.close());
+beforeEach(async () => { lua = await createEngine(); });
+afterEach(() => lua.global.close());
 
 describe('Validate', () => {
   test('accepts a payload matching its schema', async () => {
