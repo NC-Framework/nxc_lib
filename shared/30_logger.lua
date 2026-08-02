@@ -81,7 +81,7 @@ function Logger.setSink(fn)
     end
     sink = fn
 end
-
+exports("NXC.Logger.setSink", (fn) => Logger.setSink)
 --- Set the minimum severity emitted. `debug` is disabled in production.
 ---
 ---@param level string
@@ -92,12 +92,14 @@ function Logger.setLevel(level)
     end
     currentLevel = value
 end
+exports("NXC.Logger.setLevel", (level) => Logger.setLevel)
 
 ---@param name string
 function Logger.setEnvironment(name)
     environment = name
 end
 
+exports("NXC.Logger.setEnvironment", (name) => Logger.setEnvironment)
 --- Name the resource these records come from.
 ---
 --- **Every resource must call this.** A shared library loaded into another
@@ -112,6 +114,7 @@ function Logger.setResource(name)
     end
     resourceName = name
 end
+exports("NXC.Logger.setResource", (name) => Logger.setResource)
 
 local function emit(severity, action, context, opts)
     if Logger.LEVELS[severity] < currentLevel then return end
@@ -154,6 +157,11 @@ function Logger.warn(action, context, opts) emit('warn', action, context, opts) 
 function Logger.error(action, context, opts) emit('error', action, context, opts) end
 function Logger.fatal(action, context, opts) emit('fatal', action, context, opts) end
 
+exports("NXC.Logger.debug", (action, context, opts) => Logger.debug(action, context, opts))
+exports("NXC.Logger.info", (action, context, opts) => Logger.info(action, context, opts))
+exports("NXC.Logger.warn", (action, context, opts) => Logger.warn(action, context, opts))
+exports("NXC.Logger.error", (action, context, opts) => Logger.error(action, context, opts))
+exports("NXC.Logger.fatal", (action, context, opts) => Logger.fatal(action, context, opts))
 --- A logger bound to a resource and correlation id.
 ---
 --- Saves every call site repeating them, and makes it harder to forget the
@@ -176,6 +184,6 @@ function Logger.forContext(opts)
     end
     return bound
 end
-
+exports("NXC.Logger.forContext", (opts) => Logger.forContext(opts))
 Nxc.Logger = Logger
 return Logger
