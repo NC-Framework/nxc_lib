@@ -184,6 +184,6 @@ function Logger.forContext(opts)
     end
     return bound
 end
-exports("NXC.Logger.forContext", (opts) => Logger.forContext(opts))
+exports("NXC.Logger.forContext", Logger.forContext(opts))
 Nxc.Logger = Logger
 return Logger
