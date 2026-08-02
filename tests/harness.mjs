@@ -6,9 +6,15 @@
  * there is no GetPlayerPed and no TriggerClientEvent. Any logic entangled with a
  * native is untestable here and belongs in a separate module.
  *
- * Files load in filename order, which is the same order `shared_scripts` globs
- * them in the manifest. A module that depends on one loaded later would fail
- * here for the same reason it would fail on a server.
+ * THE LOAD ORDER COMES FROM `fxmanifest.lua`, NOT FROM THIS FILE.
+ *
+ * It used to read the shared directory and sort alphabetically, which worked
+ * only because the filenames carried numeric prefixes. Those prefixes are gone —
+ * they are not how FiveM resources are normally written — so the manifest
+ * enumerates the load order instead, and this reads it from there.
+ *
+ * Which means the tests exercise the same declaration the server does. Reorder
+ * the manifest wrongly and the suite fails here rather than on deployment.
 
  *
  * ONE ENGINE PER TEST, NOT PER FILE. wasmoon 1.16.0 leaks on every `doString`,
@@ -30,7 +36,45 @@ import { fileURLToPath } from 'node:url';
 import { LuaFactory } from 'wasmoon';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const sharedDir = resolve(here, '..', 'shared');
+const resourceRoot = resolve(here, '..');
+const workspace = resolve(resourceRoot, '..');
+
+/**
+ * Expand one `shared_scripts` entry into absolute file paths.
+ *
+ * `@other_resource/path` resolves into the sibling checkout, which is what the
+ * server does with another resource's files. A bare path resolves locally. Both
+ * support a `*` glob in the final segment.
+ */
+function expand(entry) {
+  let base = resourceRoot;
+  let rel = entry;
+
+  const external = entry.match(/^@([\w-]+)\/(.+)$/);
+  if (external) {
+    base = resolve(workspace, external[1]);
+    rel = external[2];
+  }
+
+  const slash = rel.lastIndexOf('/');
+  const dir = resolve(base, slash === -1 ? '' : rel.slice(0, slash));
+  const leaf = slash === -1 ? rel : rel.slice(slash + 1);
+
+  if (!leaf.includes('*')) return [join(dir, leaf)];
+
+  const re = new RegExp('^' + leaf.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
+  return readdirSync(dir).filter((f) => re.test(f)).sort().map((f) => join(dir, f));
+}
+
+/** Every shared script this resource declares, in declared order. */
+function declaredSharedScripts() {
+  const manifest = readFileSync(join(resourceRoot, 'fxmanifest.lua'), 'utf8');
+  const block = manifest.match(/shared_scripts\s*\{([\s\S]*?)\n\}/);
+  if (!block) throw new Error('fxmanifest.lua declares no shared_scripts block');
+  const entries = [...block[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  if (!entries.length) throw new Error('shared_scripts block is empty');
+  return entries.flatMap(expand);
+}
 
 /**
  * Create an engine with every shared module loaded.
@@ -42,16 +86,12 @@ export async function createEngine() {
   const factory = new LuaFactory();
   const lua = await factory.createEngine();
 
-  const files = readdirSync(sharedDir)
-    .filter((f) => f.endsWith('.lua'))
-    .sort();
-
-  for (const file of files) {
-    const source = readFileSync(join(sharedDir, file), 'utf8');
+  for (const file of declaredSharedScripts()) {
+    const source = readFileSync(file, 'utf8');
     try {
       await lua.doString(source);
     } catch (err) {
-      throw new Error(`failed loading shared/${file}: ${err.message}`);
+      throw new Error(`failed loading ${file}: ${err.message}`);
     }
   }
 

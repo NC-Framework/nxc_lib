@@ -26,8 +26,30 @@ author 'The Nexus Core Framework team'
 description 'Shared primitives for Nexus Core: result and error types, correlation, validation, logging, RPC envelopes, rate limiting.'
 version '0.1.0'
 
+-- Scripts are ENUMERATED, in load order, rather than globbed.
+--
+-- The numeric filename prefixes that used to encode this order are gone: they
+-- are not how FiveM resources are normally written, and they put load order in
+-- the filesystem where it is easy to break and impossible to comment. The order
+-- lives here instead, where it can be read and reasoned about.
+--
+-- A glob would sort alphabetically, which is not dependency order.
 shared_scripts {
-    'shared/*.lua',
+    'shared/namespace.lua',
+    'shared/result.lua',
+    'shared/errors.lua',
+    'shared/correlation.lua',
+    'shared/time.lua',
+    'shared/serialize.lua',
+    'shared/validate.lua',
+    'shared/envelope.lua',
+    'shared/ratelimit.lua',
+    'shared/cancel.lua',
+    'shared/logger.lua',
+    'shared/locale.lua',
+    'shared/permissions.lua',
+    'shared/health.lua',
+    'shared/config_schema.lua',
 }
 
 files {

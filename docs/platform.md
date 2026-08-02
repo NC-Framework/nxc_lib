@@ -25,7 +25,7 @@ someone looked and found nothing, and an absent section is not.
 
 ### 4. Voice, networking, state bag, entity, and routing bucket assumptions
 
-**None of its own.** `21_envelope.lua` defines the RPC envelope format but does not transmit it; transport belongs to the caller. Nothing here reads or writes a state bag, owns an entity, or allocates a routing bucket.
+**None of its own.** `envelope.lua` defines the RPC envelope format but does not transmit it; transport belongs to the caller. Nothing here reads or writes a state bag, owns an entity, or allocates a routing bucket.
 
 **Voice:** no involvement. Voice is `nxc_voice`, which does not exist yet.
 

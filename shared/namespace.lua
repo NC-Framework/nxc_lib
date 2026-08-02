@@ -15,6 +15,17 @@ Nxc = Nxc or {}
 Nxc.RESOURCE = 'nxc_lib'
 Nxc.VERSION = '0.1.0'
 
+--- Contract version of the surface other resources consume.
+---
+--- Every resource loads these modules into its OWN Lua state, so two resources
+--- can be running two different copies of nxc_lib at once — whichever was on
+--- disk when each was last deployed. Nothing makes them agree.
+---
+--- Incremented when the shared surface changes incompatibly. A consumer asserts
+--- the minimum it needs at startup, so a stale copy fails by name instead of as
+--- `attempt to call a nil value` at whatever line first touches a new function.
+Nxc.CONTRACT_VERSION = 1
+
 --- Freeze a table against accidental mutation.
 ---
 --- Used for value objects that cross a resource boundary. A caller that mutates
