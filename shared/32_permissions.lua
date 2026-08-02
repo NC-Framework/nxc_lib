@@ -4,7 +4,7 @@
 --- capability check, because the alternative scatters the rule across every
 --- place that compares a grade and breaks the moment a department renames one.
 ---
---- This is an *interface*. `nexus_core` owns capability grants and resolution;
+--- This is an *interface*. `nxc_core` owns capability grants and resolution;
 --- `nxc_lib` provides the shape and the check helper so every resource asks the
 --- same way.
 
@@ -18,11 +18,11 @@ Permissions.RISK = {
 
 local registry = {}
 
--- Resolver supplied by nexus_core. Until one is installed, every check denies:
+-- Resolver supplied by nxc_core. Until one is installed, every check denies:
 -- a permission system that fails open is worse than one that is absent.
 local resolver = nil
 
---- Install the capability resolver. Called by `nexus_core`.
+--- Install the capability resolver. Called by `nxc_core`.
 ---
 ---@param fn fun(actor: any, capability: string): boolean
 function Permissions.setResolver(fn)
