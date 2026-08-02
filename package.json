@@ -1,0 +1,15 @@
+{
+  "name": "nxc_lib",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Shared primitives for Nexus Core: result and error types, correlation, validation, logging, RPC envelopes, rate limiting.",
+  "author": "The Nexus Core Framework team",
+  "homepage": "https://nxcframework.net",
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "devDependencies": {
+    "wasmoon": "^1.16.0"
+  }
+}
