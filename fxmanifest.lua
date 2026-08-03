@@ -24,7 +24,7 @@ nxc_legacy_compatibility 'none'
 
 author 'The Nexus Core Framework team'
 description 'Shared primitives for Nexus Core: result and error types, correlation, validation, logging, RPC envelopes, rate limiting.'
-version '0.1.0'
+version '0.2.0'
 
 -- Scripts are ENUMERATED, in load order, rather than globbed.
 --
