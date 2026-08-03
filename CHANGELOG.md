@@ -2,6 +2,20 @@
 
 Entries are added only for genuinely user-visible or contract-relevant changes.
 
+## 0.3.1 — 2026-08-03
+
+### Fixed
+
+- The default log sink renders an empty list as `[]` rather than `{...}`, and a
+  map as its sorted keys rather than `{...}`.
+
+  `{...}` reads as "there is something here I am not showing you". The first
+  deployment where the configuration handshake succeeded logged
+  `removedKeys={...}` on a first registration, where nothing had been removed —
+  anyone reading it would reasonably conclude fields had vanished from the
+  schema. A map now shows its keys and not its values, because the keys are the
+  useful part and a value may be something that has no business in a log line.
+
 ## 0.3.0 — 2026-08-03
 
 Contract version 3.

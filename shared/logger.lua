@@ -43,9 +43,28 @@ local function renderContext(context)
     for _, key in ipairs(keys) do
         local value = context[key]
         if type(value) == 'table' then
+            -- THREE CASES, AND THEY MUST NOT LOOK ALIKE.
+            --
+            -- An empty list used to render as `{...}`, which reads as "there is
+            -- something here I am not showing you" when the truth is the
+            -- opposite. A real deployment logged `removedKeys={...}` on a first
+            -- registration, where nothing had been removed — the one reading
+            -- that would reasonably conclude fields had disappeared from the
+            -- schema.
             local items = {}
             for _, item in ipairs(value) do items[#items + 1] = tostring(item) end
-            value = #items > 0 and ('[' .. table.concat(items, ',') .. ']') or '{...}'
+            if #items > 0 then
+                value = '[' .. table.concat(items, ',') .. ']'
+            elseif next(value) == nil then
+                value = '[]'
+            else
+                -- A map. Its keys are the useful part; the values may be
+                -- anything, including something that should not be logged.
+                local mapKeys = {}
+                for mapKey in pairs(value) do mapKeys[#mapKeys + 1] = tostring(mapKey) end
+                table.sort(mapKeys)
+                value = '{' .. table.concat(mapKeys, ',') .. '}'
+            end
         end
         value = tostring(value)
         if #value > 96 then value = value:sub(1, 93) .. '...' end
