@@ -2,6 +2,38 @@
 
 Entries are added only for genuinely user-visible or contract-relevant changes.
 
+## 0.3.0 — 2026-08-03
+
+Contract version 3.
+
+### Added
+
+- `Nxc.plain`, a deep copy with real keys of its own, for values crossing a
+  resource boundary.
+
+  **A frozen table is raw-empty.** `Nxc.freeze` returns
+  `setmetatable({}, { __index = t })`, so the contents are reachable only through
+  the metatable: `pairs` sees them because of `__pairs`, `next` does not, and
+  neither does any serialiser. Every `Result` is frozen, so every export
+  returning one sent `{}` — the caller saw no `ok` field and reported failure
+  while the producer logged success. Found on a real server, where nxc_config
+  logged a registration as accepted in the same tick nxc_core logged it as
+  refused.
+
+  Nothing in-process needs this, which is why no test caught it: within one Lua
+  state the metatable works perfectly.
+
+### Fixed
+
+- `Nxc.VERSION` is read from the manifest instead of being a second literal. The
+  two had already drifted — the manifest said 0.2.0 and the namespace said
+  0.1.0.
+
+### Tests
+
+- Six tests covering raw-emptiness and `Nxc.plain`, using `next` rather than
+  `pairs` so they see what a serialiser sees. 119 total.
+
 ## Unreleased
 
 Initial implementation of the shared foundation primitives.
