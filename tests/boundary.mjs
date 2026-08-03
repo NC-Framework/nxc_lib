@@ -142,7 +142,28 @@ end
  * would say the file is broken when the truth is that the harness is incomplete.
  */
 function nativeStubs(resource, opts = {}) {
-  return `
+  const isServer = opts.server !== false;
+
+  /**
+   * THE CLIENT RUNTIME IS SMALLER THAN LUA, and the harness must be too.
+   *
+   * CitizenFX gives the client a reduced standard library: `os` is absent, and
+   * shared code calling `os.time` or `os.date` runs perfectly on the server and
+   * dies on the client. wasmoon is plain Lua 5.4 and has all of it, so a test
+   * runtime MORE capable than the target certifies code the target cannot run.
+   *
+   * Found in deployment: `/nxcui confirm` crashed reaching for the clock, and
+   * the log line reporting the crash crashed in the logger's own timestamp.
+   *
+   * Removing them here is what makes a client-mode test mean something. If this
+   * is ever softened to keep a suite green, the suite stops testing the client.
+   */
+  const stripServerOnly = isServer ? '' : `
+    os = nil
+    io = nil
+  `;
+
+  return stripServerOnly + `
     __exports = {}
     __events = {}
     __log = {}
@@ -180,7 +201,11 @@ function nativeStubs(resource, opts = {}) {
     function GetPlayerName() return 'boundary' end
     function GetPlayerIdentifiers() return {} end
     function GetNumPlayerIdentifiers() return 0 end
-    function GetGameTimer() return 0 end
+    -- A TICKING timer, not a constant. GetGameTimer stuck at zero makes every
+    -- duration zero, which turns a rate limiter into a no-op and a deadline into
+    -- one that never arrives — a stub that lies quietly.
+    __gameTimerMs = 0
+    function GetGameTimer() __gameTimerMs = __gameTimerMs + 16 return __gameTimerMs end
     function GetHashKey() return 0 end
     function PerformHttpRequest() end
     function ExecuteCommand() end
@@ -248,13 +273,23 @@ export async function createResourceEngine(resource, opts = {}) {
     throw new Error(`${resource}: failed to load, but each file loads alone: ${err.message}`);
   }
 
-  // A deterministic clock, so a boundary test is never a timing test.
-  await lua.doString(`
-    if Nxc and Nxc.Time then
-      __testClockMs = ${opts.nowMs ?? 1_700_000_000_000}
-      Nxc.Time.setClock(function() return __testClockMs end)
-    end
-  `);
+  /**
+   * A deterministic clock, so a boundary test is never a timing test.
+   *
+   * `realClock: true` SKIPS IT, and that option exists because the override was
+   * hiding the very thing client mode was built to catch. Stripping `os` proves
+   * nothing if the first thing the harness does afterwards is replace every call
+   * that would have reached for it — the defect was reintroduced deliberately
+   * and fourteen client-mode tests stayed green.
+   */
+  if (!opts.realClock) {
+    await lua.doString(`
+      if Nxc and Nxc.Time then
+        __testClockMs = ${opts.nowMs ?? 1_700_000_000_000}
+        Nxc.Time.setClock(function() return __testClockMs end)
+      end
+    `);
+  }
 
   return lua;
 }

@@ -2,6 +2,47 @@
 
 Entries are added only for genuinely user-visible or contract-relevant changes.
 
+## 0.4.0 - 2026-08-03
+
+### Fixed
+
+- Shared code no longer requires `os`, which DOES NOT EXIST ON THE FIVEM CLIENT.
+
+  CitizenFX gives the client a reduced standard library. `Nxc.Time` called
+  `os.time` and `os.date`, and `Nxc.Correlation` seeded from `os.time`, so all
+  three worked on the server and crashed on the client with `attempt to index a
+  nil value (global 'os')`.
+
+  It failed twice over in deployment: a UI surface crashed reaching for the
+  clock, and the log line reporting that crash crashed as well, inside the
+  logger's own timestamp. A diagnostic that cannot report its own failure is
+  worse than none.
+
+  No test could have caught it. wasmoon is plain Lua 5.4 with the whole standard
+  library, so the test runtime was more capable than the target and certified
+  code the target cannot run.
+
+### Changed
+
+- `Time.iso8601` computes the date itself rather than calling `os.date`. One
+  implementation that runs on both sides beats a branch only ever exercised on
+  one - the untaken branch is where the defect lived.
+
+- The clock is anchored once against `GetGameTimer`, so wall-clock time has
+  millisecond resolution instead of jumping whole seconds. A clock that is flat
+  between jumps makes every duration measured against it wrong by up to a
+  second, which for a rate limiter is the difference between a bound and a
+  suggestion.
+
+### Added
+
+- `Time.HAS_WALL_CLOCK`, so a caller needing a real date can ask rather than
+  discovering from a timestamp in 1970.
+
+- A client-runtime test mode: `os` and `io` are removed, and shared code is run
+  against what the client actually has. Seven tests, verified by reintroducing
+  both defects.
+
 ## 0.3.1 — 2026-08-03
 
 ### Fixed
