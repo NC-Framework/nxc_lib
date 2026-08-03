@@ -21,10 +21,14 @@ Nxc.VERSION = '0.1.0'
 --- can be running two different copies of nxc_lib at once — whichever was on
 --- disk when each was last deployed. Nothing makes them agree.
 ---
+--- v2 (2026-08-03) added Nxc.Persistence and Nxc.Migrations, moved here from
+--- nxc_core. Additive, so nothing breaks — but a consumer needing them must
+--- require v2, and the version is how it says so.
+---
 --- Incremented when the shared surface changes incompatibly. A consumer asserts
 --- the minimum it needs at startup, so a stale copy fails by name instead of as
 --- `attempt to call a nil value` at whatever line first touches a new function.
-Nxc.CONTRACT_VERSION = 1
+Nxc.CONTRACT_VERSION = 2
 
 --- Freeze a table against accidental mutation.
 ---

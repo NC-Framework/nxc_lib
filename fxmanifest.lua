@@ -49,6 +49,8 @@ shared_scripts {
     'shared/locale.lua',
     'shared/permissions.lua',
     'shared/health.lua',
+    'shared/persistence.lua',
+    'shared/migrations.lua',
     'shared/config_schema.lua',
 }
 
