@@ -190,3 +190,74 @@ describe('nxc_ui client exports, called from another Lua state', () => {
     assert.equal(natives.hasCursor, false);
   });
 });
+
+describe('nxc_core exports, called from another Lua state', () => {
+  let boundary;
+  beforeEach(async () => {
+    boundary = await createBoundary({ provider: 'nxc_core', consumer: 'nxc_target' });
+  });
+  afterEach(() => boundary.close());
+
+  /**
+   * nxc_core had NO exports at all until nxc_target needed to ask it whether a
+   * player holds a capability. Sessions, accounts, characters and capabilities
+   * were all correct, all tested, and all unreachable from any other resource.
+   *
+   * These are the tests that would have caught that: an export nothing calls is
+   * an export whose signature nobody has ever checked.
+   */
+  test('isReady crosses as a boolean', async () => {
+    const ready = await boundary.callExport('isReady');
+    assert.equal(typeof ready, 'boolean');
+  });
+
+  test('a connection with no session yields nil rather than an error', async () => {
+    const session = await boundary.callExport('session', [999]);
+    // Asking about a connection that does not exist is ordinary — a player
+    // disconnects mid-request — and it must not throw across the boundary.
+    assert.ok(session === null || session === undefined);
+  });
+
+  test('hasCapability answers false for an unknown connection, not nil', async () => {
+    const held = await boundary.callExport('hasCapability', [999, 'doors.open']);
+    // FAILING CLOSED. A gate that returns nil for an unknown player is a gate
+    // that a caller writing `if not denied then` walks straight through.
+    assert.equal(held, false);
+  });
+
+  test('capabilities crosses as a table even when empty', async () => {
+    const capabilities = await boundary.callExport('capabilities', [999]);
+    // An empty set must arrive as an empty table, not as nil. A consumer that
+    // gets nil where it expected a table crashes on the first index.
+    assert.equal(typeof capabilities, 'object');
+    assert.ok(capabilities !== null);
+  });
+
+  test('a real session crosses with its account intact', async () => {
+    const r = await boundary.provider.doString(`
+      NxcCore.Sessions.reset()
+      local id = NxcCore.Identifiers.account()
+      NxcCore.Sessions.create({ source = 7, accountId = id })
+      NxcCore.Sessions.setCapabilityGrants(7, {
+        { source = 'employment', sourceId = 'job_police', allow = { 'doors.open' } },
+      })
+      return id
+    `);
+
+    const session = await boundary.callExport('session', [7]);
+    assert.equal(session.accountId, r);
+    // The stored session carries a correlation id and identifiers that no
+    // consumer needs. The summary is what crosses.
+    assert.equal(session.identifiers, undefined);
+
+    assert.equal(await boundary.callExport('hasCapability', [7, 'doors.open']), true);
+    assert.equal(await boundary.callExport('hasCapability', [7, 'doors.lock']), false);
+    assert.equal(await boundary.callExport('accountFor', [7]), r);
+
+    // nil during character selection, which is a normal state rather than an
+    // error — and it has to survive the crossing as nil rather than as an empty
+    // table that a caller would treat as a character id.
+    const character = await boundary.callExport('characterFor', [7]);
+    assert.ok(character === null || character === undefined);
+  });
+});
