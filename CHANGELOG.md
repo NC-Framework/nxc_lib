@@ -91,6 +91,27 @@ Contract version 3.
 
 ## Unreleased
 
+## 0.5.0 — 2026-08-05
+
+### Added
+
+- `Nxc.Service` — health tracking, readiness, and registration with nxc_core in
+  one call. Written once here rather than six times across the resources that
+  need it, because six copies of a retry loop drift and the copy that drifts is
+  the one nobody reads until a resource is missing from the health report.
+  Server-side. It references nxc_core by name and `GetResourceState`, so nxc_lib
+  still loads on a server where nxc_core is absent.
+
+### Fixed
+
+- The unit harness stubs enough CitizenFX for a module to load. It stubbed none,
+  so the first shared file to guard itself with `IsDuplicityVersion` broke every
+  test in every suite.
+- Two boundary tests had been failing since the click fix, on a
+  `SetCursorLocation` stub that was never added when that native was introduced.
+  They were not testing focus; they were dying before they got there.
+
+
 Initial implementation of the shared foundation primitives.
 
 ### Added

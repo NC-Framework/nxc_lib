@@ -220,6 +220,21 @@ function nativeStubs(resource, opts = {}) {
         __nuiFocus = { hasFocus = hasFocus, hasCursor = hasCursor }
     end
 
+    -- ADDED AFTER THESE TWO TESTS HAD BEEN FAILING UNNOTICED. The click fix
+    -- introduced SetCursorLocation, SetNuiFocusKeepInput and DisablePlayerFiring
+    -- into nxc_ui, and this list was not extended, so both focus tests died on a
+    -- missing global rather than on anything they were written to check.
+    --
+    -- Recorded rather than discarded: where the cursor was placed and whether
+    -- input was kept are both assertable, and the click defect was precisely a
+    -- wrong answer to the second.
+    __cursorLocation = nil
+    __nuiKeepInput = false
+    function SetCursorLocation(x, y) __cursorLocation = { x = x, y = y } end
+    function SetNuiFocusKeepInput(keep) __nuiKeepInput = keep end
+    function DisablePlayerFiring() end
+    function DisableControlAction() end
+
     Citizen = { CreateThread = CreateThread, Wait = Wait, SetTimeout = SetTimeout }
   `;
 }

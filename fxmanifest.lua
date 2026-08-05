@@ -24,7 +24,7 @@ nxc_legacy_compatibility 'none'
 
 author 'The Nexus Core Framework team'
 description 'Shared primitives for Nexus Core: result and error types, correlation, validation, logging, RPC envelopes, rate limiting.'
-version '0.4.0'
+version '0.5.0'
 
 -- Scripts are ENUMERATED, in load order, rather than globbed.
 --
@@ -52,6 +52,7 @@ shared_scripts {
     'shared/persistence.lua',
     'shared/migrations.lua',
     'shared/config_schema.lua',
+    'shared/service_client.lua',
 }
 
 files {

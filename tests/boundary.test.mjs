@@ -261,3 +261,82 @@ describe('nxc_core exports, called from another Lua state', () => {
     assert.ok(character === null || character === undefined);
   });
 });
+
+/**
+ * Service registration and discovery, across a real boundary.
+ *
+ * P1-04 failed at the Phase 1 gate with `services.lua` complete, tested, and
+ * exported by nobody — so "service registration and discovery work" had never
+ * been true outside a single Lua state. These are the tests that make the claim
+ * mean something.
+ */
+describe('nxc_core service registration, from another state', () => {
+  let boundary;
+  beforeEach(async () => {
+    boundary = await createBoundary({ provider: 'nxc_core', consumer: 'nxc_zones' });
+  });
+  afterEach(() => boundary.close());
+
+  test('a resource registers itself and is then discoverable', async () => {
+    const registered = await boundary.callExport('registerService',
+      [{ version: '0.1.1', contractVersion: 1, capabilities: ['zones'] }]);
+    assert.equal(registered.ok, true);
+
+    const found = await boundary.callExport('discover', ['nxc_zones']);
+    assert.equal(found.present, true);
+    assert.equal(found.service.name, 'nxc_zones');
+  });
+
+  test('the name comes from the caller, not from the spec', async () => {
+    // A resource that could name itself could register as nxc_core and be
+    // discovered in its place. The spec has no name field at all, and passing
+    // one changes nothing.
+    await boundary.callExport('registerService',
+      [{ name: 'nxc_core', contractVersion: 1 }]);
+
+    const impersonated = await boundary.callExport('discover', ['nxc_zones']);
+    assert.equal(impersonated.present, true);
+    assert.equal(impersonated.service.name, 'nxc_zones');
+  });
+
+  test('a service that is absent is reported, not raised', async () => {
+    const found = await boundary.callExport('discover', ['nxc_nothing']);
+    // present false is a NORMAL answer. A consumer that cannot ask this without
+    // handling an error cannot support an optional dependency.
+    assert.equal(found.present, false);
+    assert.equal(found.ready, false);
+    assert.equal(found.reason, 'not registered');
+  });
+
+  test('a contract version below what the caller needs is present but not ready', async () => {
+    await boundary.callExport('registerService', [{ contractVersion: 1 }]);
+
+    const found = await boundary.callExport('discover', ['nxc_zones', 2]);
+    assert.equal(found.present, true);
+    assert.equal(found.ready, false);
+    // The reason is the whole value: "not ready" alone sends somebody to read
+    // startup logs for a resource that started perfectly.
+    assert.match(found.reason, /contract version 1 is below the required 2/);
+  });
+
+  test('registering twice updates rather than refusing', async () => {
+    await boundary.callExport('registerService', [{ version: '0.1.0', contractVersion: 1 }]);
+    const again = await boundary.callExport('registerService',
+      [{ version: '0.1.1', contractVersion: 1 }]);
+
+    // A resource restart is ordinary. Refusing the second registration would
+    // leave the entry describing the version that stopped.
+    assert.equal(again.ok, true);
+    const found = await boundary.callExport('discover', ['nxc_zones']);
+    assert.equal(found.service.version, '0.1.1');
+  });
+
+  test('the registration result survives the boundary as something readable', async () => {
+    const registered = await boundary.callExport('registerService', [{ contractVersion: 1 }]);
+    // The defect this whole harness exists for: a frozen Result arrives empty
+    // and the caller reads its own success as a failure.
+    assert.equal(registered.ok, true);
+    assert.notEqual(registered.value, undefined);
+    assert.equal(registered.value.name, 'nxc_zones');
+  });
+});
