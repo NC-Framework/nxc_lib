@@ -140,7 +140,7 @@ local function emit(severity, action, context, opts)
     local record = {
         timestamp = Nxc.Time.iso8601(),
         environment = environment,
-        resource = opts.resource or resourceName or Nxc.RESOURCE,
+        resource = opts.resource or resourceName or Nxc.resourceName(),
         version = opts.version or Nxc.VERSION,
         action = action,
         actorAccount = opts.actorAccount,

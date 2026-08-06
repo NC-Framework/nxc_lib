@@ -91,6 +91,29 @@ Contract version 3.
 
 ## Unreleased
 
+## 0.5.1 — 2026-08-05
+
+### Fixed
+
+- **A health report named the wrong resource.** `Health.init` defaulted its
+  resource to `Nxc.RESOURCE`, which is the literal `nxc_lib` in every state that
+  loads this library — so `nxc_health` would have printed eight resources all
+  called nxc_lib. Found by asking what needed testing on 2026.08.16, before it
+  reached a server.
+
+  **The identical defect had already been found and fixed in the logger**, where
+  it was observed on a real server. That fix was applied to the logger and
+  nowhere else, so it survived in `Health.init` and was shipped by the release
+  that made health reportable. RSK-28, third sighting.
+
+### Added
+
+- `Nxc.resourceName()` — what `GetCurrentResourceName()` says, falling back to
+  the literal only where no native exists. Every module that labels a record with
+  an origin now asks it: health, errors, permissions, and the logger's fallback.
+  The class fix rather than the instance fix.
+
+
 ## 0.5.0 — 2026-08-05
 
 ### Added

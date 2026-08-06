@@ -62,7 +62,7 @@ function Permissions.register(spec)
     registry[spec.name] = Nxc.freeze({
         name = spec.name,
         description = spec.description,
-        resource = spec.resource or Nxc.RESOURCE,
+        resource = spec.resource or Nxc.resourceName(),
         risk = spec.risk,
         defaultGrants = spec.defaultGrants or {},
         audited = audited == true,

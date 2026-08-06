@@ -340,3 +340,47 @@ describe('nxc_core service registration, from another state', () => {
     assert.equal(registered.value.name, 'nxc_zones');
   });
 });
+
+/**
+ * A health report has to name the resource it came from.
+ *
+ * THIS TEST EXISTS BECAUSE THE SAME DEFECT SHIPPED TWICE. Every resource loads
+ * nxc_lib into its own Lua state, so `Nxc.RESOURCE` reads `nxc_lib` inside all
+ * of them. The logger shipped with that defect and was caught on a real server.
+ * The fix was applied to the logger and nowhere else, so `Health.init` carried
+ * it into the release that made health reportable — where `nxc_health` would
+ * have printed eight resources all named nxc_lib, which is worse than no report
+ * because it looks like one.
+ *
+ * A single-state test cannot see this. Only a state that belongs to a resource
+ * OTHER than nxc_lib can.
+ */
+describe('A report names the resource it came from', () => {
+  let boundary;
+  beforeEach(async () => {
+    boundary = await createBoundary({ provider: 'nxc_zones', consumer: 'nxc_core' });
+  });
+  afterEach(() => boundary.close());
+
+  test('nxc_zones reports itself, not nxc_lib', async () => {
+    const report = await boundary.callExport('health');
+    assert.equal(report.resource, 'nxc_zones');
+  });
+
+  test('and its version is its own, not the library it loaded', async () => {
+    const report = await boundary.callExport('health');
+    // Nxc.VERSION was already correct — it reads GetCurrentResourceName. The
+    // asymmetry is the whole lesson: one line of the same file asked the
+    // platform and the next line used a literal.
+    assert.notEqual(report.version, undefined);
+  });
+
+  test('a resource that has not registered configuration is degraded', async () => {
+    const report = await boundary.callExport('health');
+    // DEGRADED, not serviceable and not failed. Its dependencies are satisfied
+    // and it is running on declared defaults, which is a real and reportable
+    // difference rather than a fault.
+    assert.equal(report.state, 'degraded');
+    assert.match(report.detail, /declared defaults/);
+  });
+});

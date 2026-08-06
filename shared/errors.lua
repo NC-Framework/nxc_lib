@@ -74,7 +74,7 @@ function Errors.new(code, message, opts)
     return Nxc.freeze({
         code = code,
         message = message or '',
-        resource = opts.resource or Nxc.RESOURCE,
+        resource = opts.resource or Nxc.resourceName(),
         correlationId = opts.correlationId,
         details = opts.details,
         retryable = retryable,

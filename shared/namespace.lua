@@ -12,7 +12,38 @@ Nxc = Nxc or {}
 
 --- Resource identity, used by the logger and the health interface so records
 --- carry their origin without every call site repeating it.
+---
+--- **THIS IS `nxc_lib` EVERYWHERE, AND THAT IS ALMOST ALWAYS THE WRONG ANSWER.**
+--- Every resource loads these modules into its OWN Lua state, so this literal
+--- reads `nxc_lib` inside nxc_core, inside nxc_zones, inside all of them. Use
+--- `Nxc.resourceName()` below unless you specifically mean this library.
 Nxc.RESOURCE = 'nxc_lib'
+
+--- Which resource this state actually belongs to.
+---
+--- `GetCurrentResourceName()` is the only thing in a shared module that knows
+--- whose state it is running in. Everything that labels a record with an origin
+--- — a log line, an error, a health report, a permission — has to ask this
+--- rather than read `Nxc.RESOURCE`.
+---
+--- **THIS EXISTS BECAUSE THE SAME DEFECT HAS NOW BEEN FOUND TWICE.** The logger
+--- shipped claiming every line came from nxc_lib, and was observed on a real
+--- server before anyone noticed. The fix was applied there and nowhere else, so
+--- `Health.init` carried the identical bug into the release that made health
+--- reportable — where it would have printed eight resources all named nxc_lib.
+--- RSK-28: fix the class, not the instance.
+---
+--- Falls back to the literal where no native exists, which is the test harness
+--- and nowhere else.
+---
+---@return string
+function Nxc.resourceName()
+    if type(GetCurrentResourceName) == 'function' then
+        local name = GetCurrentResourceName()
+        if type(name) == 'string' and name ~= '' then return name end
+    end
+    return Nxc.RESOURCE
+end
 --- Read from the manifest so the version is stated ONCE.
 ---
 --- It used to be a literal here as well as in fxmanifest.lua, and they drifted:

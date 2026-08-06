@@ -30,7 +30,7 @@ local state = {
 ---@param opts { resource?: string, version?: string, dependencies?: string[] }|nil
 function Health.init(opts)
     opts = opts or {}
-    state.resource = opts.resource or Nxc.RESOURCE
+    state.resource = opts.resource or Nxc.resourceName()
     state.version = opts.version or Nxc.VERSION
     state.value = Health.STATE.STARTING
     state.startedAt = Nxc.Time.nowMs()
